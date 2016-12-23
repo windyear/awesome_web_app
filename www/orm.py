@@ -161,3 +161,5 @@ class Model(dict,metaclass=ModelMetaclass):
                 logging.debug('using default vlue for %s :%s' % (key,str(value)))
                 setattr(self,key,value)
         return value
+        
+    
