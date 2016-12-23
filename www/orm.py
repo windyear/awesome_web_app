@@ -104,7 +104,7 @@ class ModelMetaclass(type):
             return type.__new__(cls,name,bases,attrs)
         tableName=attrs.get('__table__',None) or name
         logging.info('found model: %s (table: %s)' % (name,tableName))
-        mapping=dict()
+        mappingsdict()
         fields=[]
         primaryKey=None
         for k,v in attrs.items():
@@ -132,3 +132,32 @@ class ModelMetaclass(type):
         attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (tableName, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primaryKey)
         attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (tableName, primaryKey)
         return type.__new__(cls, name, bases, attrs)
+        
+#create a class which can represent a table in the database
+class Model(dict,metaclass=ModelMetaclass):
+
+#the init fuction
+    def __init__(self,**kw):
+        super(Model,self).__init__(**kw)
+        
+    def __getattr__(self,key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(r'"Model" object has no attribute '%s' % key)
+      
+    def __setattr__(self,key,value):
+        self[key]=value
+        
+    def getValue(self,key):
+        return getattr(self,key,None)
+    
+    def getValueOrDefault(self,key):
+        value=getattr(self,key,None)
+        if value is None:
+            field=self.__mapping__[key]
+            if field.default is not None:
+                value=field.default() if callable(field.default) else field.default
+                logging.debug('using default vlue for %s :%s' % (key,str(value)))
+                setattr(self,key,value)
+        return value
